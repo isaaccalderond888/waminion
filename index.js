@@ -43,6 +43,7 @@ client.on('ready', async () => {
     console.log(chalk.gray(`Total de chats encontrados: ${chats.length}`));
 
     const now = Math.floor(Date.now() / 1000);
+    const unMesAtras = now - 30 * 24 * 60 * 60;
     const pending = [];
     let procesados = 0;
 
@@ -52,6 +53,7 @@ client.on('ready', async () => {
 
       const last = chat.lastMessage;
       if (last.fromMe) continue;
+      if (last.timestamp < unMesAtras) continue;
 
       try {
         const messages = await chat.fetchMessages({ limit: 5 });
