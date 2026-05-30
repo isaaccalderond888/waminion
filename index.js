@@ -15,6 +15,7 @@ const client = new Client({
   puppeteer: {
     headless: true,
     args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    protocolTimeout: 120000,
   },
 });
 
@@ -37,9 +38,13 @@ client.on('ready', async () => {
   console.log(chalk.gray('Escaneando chats pendientes...'));
 
   try {
+    console.log(chalk.gray('Cargando lista de chats (puede tardar 1-2 minutos)...'));
     const chats = await client.getChats();
+    console.log(chalk.gray(`Total de chats encontrados: ${chats.length}`));
+
     const now = Math.floor(Date.now() / 1000);
     const pending = [];
+    let procesados = 0;
 
     for (const chat of chats) {
       if (chat.isGroup) continue;
@@ -48,27 +53,36 @@ client.on('ready', async () => {
       const last = chat.lastMessage;
       if (last.fromMe) continue;
 
-      const messages = await chat.fetchMessages({ limit: 5 });
-      const recentMessages = messages
-        .filter(m => m.body && m.body.trim())
-        .slice(-3)
-        .map(m => ({
-          fromMe: m.fromMe,
-          body: m.body,
-          timestamp: m.timestamp,
-        }));
+      try {
+        const messages = await chat.fetchMessages({ limit: 5 });
+        const recentMessages = messages
+          .filter(m => m.body && m.body.trim())
+          .slice(-3)
+          .map(m => ({
+            fromMe: m.fromMe,
+            body: m.body,
+            timestamp: m.timestamp,
+          }));
 
-      const contact = await chat.getContact();
-      const name = contact.pushname || contact.name || chat.name || chat.id.user;
-      const daysPending = Math.floor((now - last.timestamp) / 86400);
+        const contact = await chat.getContact();
+        const name = contact.pushname || contact.name || chat.name || chat.id.user;
+        const daysPending = Math.floor((now - last.timestamp) / 86400);
 
-      pending.push({
-        name,
-        lastMessage: last.body || '[media o sticker]',
-        lastMessageTime: last.timestamp,
-        daysPending,
-        recentMessages,
-      });
+        pending.push({
+          name,
+          lastMessage: last.body || '[media o sticker]',
+          lastMessageTime: last.timestamp,
+          daysPending,
+          recentMessages,
+        });
+      } catch (e) {
+        // skip chats that fail individually
+      }
+
+      procesados++;
+      if (procesados % 20 === 0) {
+        process.stdout.write(chalk.gray(`  Revisados ${procesados}/${chats.length}...\r`));
+      }
     }
 
     if (pending.length === 0) {
