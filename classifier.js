@@ -50,18 +50,19 @@ ${chatSummaries}`;
   const response = await client.messages.create({
     model: 'claude-sonnet-4-20250514',
     max_tokens: 1024,
-    messages: [{ role: 'user', content: prompt }],
+    messages: [
+      { role: 'user', content: prompt },
+      { role: 'assistant', content: '[' },
+    ],
   });
 
-  const raw = response.content[0].text.trim()
-    .replace(/^```(?:json)?\s*/i, '')
-    .replace(/\s*```$/i, '');
+  // we prefilled '[' so prepend it back
+  const raw = '[' + response.content[0].text.trim();
 
   let classifications;
   try {
     classifications = JSON.parse(raw);
   } catch (e) {
-    // attempt recovery from truncated JSON
     try {
       const fixed = raw.replace(/,\s*\{[^}]*$/, '') + ']';
       classifications = JSON.parse(fixed);
