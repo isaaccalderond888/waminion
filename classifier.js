@@ -50,24 +50,26 @@ ${chatSummaries}`;
   const response = await client.messages.create({
     model: 'claude-sonnet-4-20250514',
     max_tokens: 1024,
-    messages: [
-      { role: 'user', content: prompt },
-      { role: 'assistant', content: '[' },
-    ],
+    messages: [{ role: 'user', content: prompt }],
   });
 
-  // we prefilled '[' so prepend it back
-  const raw = '[' + response.content[0].text.trim();
+  const raw = response.content[0].text;
+  // extract JSON array regardless of markdown wrapping
+  const match = raw.match(/\[\s*\{[\s\S]*\}\s*\]/);
+  if (!match) {
+    console.error('Sin JSON en respuesta:', raw.slice(0, 200));
+    return [];
+  }
 
   let classifications;
   try {
-    classifications = JSON.parse(raw);
+    classifications = JSON.parse(match[0]);
   } catch (e) {
     try {
-      const fixed = raw.replace(/,\s*\{[^}]*$/, '') + ']';
+      const fixed = match[0].replace(/,\s*\{[^}]*$/, '') + ']';
       classifications = JSON.parse(fixed);
     } catch (e2) {
-      console.error('No se pudo parsear respuesta de Claude:', raw.slice(0, 200));
+      console.error('No se pudo parsear JSON:', match[0].slice(0, 200));
       return [];
     }
   }
