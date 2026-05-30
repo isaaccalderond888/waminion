@@ -264,6 +264,8 @@ socket.on('status', ({ type, message }) => {
   loadingMsg.textContent = message;
 
   if (type === 'ready') {
+    // only show connect screen if there's no report showing
+    if (!reportSection.classList.contains('hidden')) return;
     showOnly(connectSection);
     btnTriage.disabled = false;
   } else if (type === 'scanning') {
