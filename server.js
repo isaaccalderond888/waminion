@@ -140,7 +140,20 @@ io.on('connection', (socket) => {
         model: 'claude-sonnet-4-20250514',
         max_tokens: 300,
         messages: [{ role: 'user', content:
-          `Eres un asistente que ayuda a redactar respuestas de WhatsApp breves y naturales en español.\n\nContexto:\n${context}\n\nPendiente: ${chat.lastMessage}\n\nEscribe UNA respuesta corta, cálida y directa. Solo el texto del mensaje, sin explicaciones.`
+          `Eres un asistente que ayuda a Isaac (psicólogo) a redactar respuestas de WhatsApp breves y naturales en español.
+
+Links de Isaac para agendar:
+- Sesiones online/Zoom: https://calendly.com/isaac-calderon-d
+- Sesiones presenciales (Clínica Newman): https://clinicanewman.site.agendapro.com/mx/sucursal/425003/profesional/692142
+
+Si el mensaje es sobre agendar, disponibilidad o terapia, incluye el link de Calendly de forma natural y amable. Menciona que si no encuentra un espacio disponible que te avise y buscan entre las consultas presenciales.
+
+Contexto de la conversación:
+${context}
+
+Pendiente: ${chat.lastMessage}
+
+Escribe UNA respuesta corta, cálida y directa como si fuera Isaac. Solo el texto del mensaje, sin explicaciones.`
         }],
       });
       socket.emit('suggestion', { idx, text: res.content[0].text.trim() });
