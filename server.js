@@ -19,7 +19,8 @@ const io = new Server(httpServer);
 app.use(express.static(__dirname + '/public'));
 
 let waClient = null;
-let status = 'disconnected'; // disconnected | qr | ready | scanning | done
+let status = 'disconnected';
+let lastReport = null;
 
 function createClient() {
   waClient = new Client({
@@ -56,6 +57,7 @@ function createClient() {
 
 io.on('connection', (socket) => {
   socket.emit('status', { type: status, message: statusMessage(status) });
+  if (lastReport) socket.emit('report', lastReport);
 
   socket.on('start_triage', async () => {
     if (status !== 'ready') return;
@@ -108,6 +110,7 @@ io.on('connection', (socket) => {
       const classified = await classifyChats(candidates);
 
       saveReport(classified);
+      lastReport = classified;
       status = 'ready';
       io.emit('report', classified);
       io.emit('status', { type: 'ready', message: `Listo — ${classified.length} pendientes encontrados` });
