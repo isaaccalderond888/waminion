@@ -43,38 +43,40 @@ client.on('ready', async () => {
     console.log(chalk.gray(`Total de chats encontrados: ${chats.length}`));
 
     const now = Math.floor(Date.now() / 1000);
-    const unMesAtras = now - 30 * 24 * 60 * 60;
-    const pending = [];
+    const sieteAias = now - 7 * 24 * 60 * 60;
+    const candidates = [];
     let procesados = 0;
 
     for (const chat of chats) {
       if (chat.isGroup) continue;
       if (!chat.lastMessage) continue;
-
-      const last = chat.lastMessage;
-      if (last.fromMe) continue;
-      if (last.timestamp < unMesAtras) continue;
+      if (chat.lastMessage.timestamp < sieteAias) continue;
 
       try {
-        const messages = await chat.fetchMessages({ limit: 5 });
+        const messages = await chat.fetchMessages({ limit: 10 });
         const recentMessages = messages
-          .filter(m => m.body && m.body.trim())
-          .slice(-3)
+          .filter(m => m.body && m.body.trim() || m.type !== 'chat')
+          .slice(-8)
           .map(m => ({
             fromMe: m.fromMe,
-            body: m.body,
+            body: m.body && m.body.trim()
+              ? m.body
+              : m.type === 'ptt' ? '[mensaje de voz]'
+              : m.type === 'image' ? '[imagen]'
+              : m.type === 'video' ? '[video]'
+              : m.type === 'document' ? '[documento]'
+              : m.type === 'sticker' ? '[sticker]'
+              : `[${m.type}]`,
             timestamp: m.timestamp,
+            type: m.type,
           }));
 
         const contact = await chat.getContact();
         const name = contact.pushname || contact.name || chat.name || chat.id.user;
-        const daysPending = Math.floor((now - last.timestamp) / 86400);
 
-        pending.push({
+        candidates.push({
           name,
-          lastMessage: last.body || '[media o sticker]',
-          lastMessageTime: last.timestamp,
-          daysPending,
+          lastMessageTime: chat.lastMessage.timestamp,
           recentMessages,
         });
       } catch (e) {
@@ -87,14 +89,14 @@ client.on('ready', async () => {
       }
     }
 
-    if (pending.length === 0) {
-      console.log(chalk.green('\n¡No tienes chats pendientes de respuesta! 🎉\n'));
+    if (candidates.length === 0) {
+      console.log(chalk.green('\n¡No tienes chats con actividad esta semana! 🎉\n'));
       process.exit(0);
     }
 
-    console.log(chalk.gray(`Encontrados ${pending.length} chats pendientes. Clasificando con IA...\n`));
+    console.log(chalk.gray(`\nAnalizando ${candidates.length} chats con IA (detectando pendientes y clasificando)...\n`));
 
-    const classified = await classifyChats(pending);
+    const classified = await classifyChats(candidates);
 
     printReport(classified);
     saveReport(classified);

@@ -9,27 +9,46 @@ const CATEGORIES = {
   SOCIAL: { emoji: '⚪', label: 'SOCIAL', priority: 4 },
 };
 
-async function classifyChats(pendingChats) {
-  if (pendingChats.length === 0) return [];
+async function classifyChats(candidates) {
+  if (candidates.length === 0) return [];
 
-  const chatSummaries = pendingChats.map((chat, i) => {
+  const chatSummaries = candidates.map((chat, i) => {
     const context = chat.recentMessages
-      .map(m => `  [${m.fromMe ? 'YO' : chat.name}]: ${m.body}`)
+      .map(m => `    [${m.fromMe ? 'YO' : chat.name}]: ${m.body}`)
       .join('\n');
-    return `CHAT_${i} | Contacto: ${chat.name} | Días sin respuesta: ${chat.daysPending}\nÚltimo mensaje: "${chat.lastMessage}"\nContexto reciente:\n${context}`;
+    return `CHAT_${i} | Contacto: ${chat.name}\nMensajes recientes (del más antiguo al más nuevo):\n${context}`;
   }).join('\n\n---\n\n');
 
-  const prompt = `Eres un asistente de triaje para una clínica médica. Clasifica cada chat de WhatsApp en una de estas categorías:
+  const prompt = `Eres un asistente personal analizando conversaciones de WhatsApp de los últimos 7 días. El usuario tiene TDAH y a veces inicia tareas pero no las completa, o responde pero olvida hacer el seguimiento real.
 
-- URGENTE: solicitud de cita, seguimiento clínico, síntomas, emergencias médicas
-- GESTION: coordinación, pagos, facturas, preguntas sobre servicios, agendamiento
-- INFO: mensajes informativos que no requieren acción inmediata, confirmaciones recibidas
-- SOCIAL: mensajes personales, conversaciones casuales, saludos sin acción requerida
+Tu trabajo es:
+1. Determinar si cada conversación tiene algo PENDIENTE de acción por parte del usuario ("YO")
+2. Si está pendiente, clasificarlo y describir exactamente qué falta hacer
 
-Para cada chat, responde SOLO con una línea en formato JSON:
-{"id": "CHAT_0", "categoria": "URGENTE", "razon": "breve explicación"}
+Una conversación está PENDIENTE si:
+- Alguien le pidió algo al usuario y no hay confirmación de que se hizo
+- Quedaron de coordinar algo y no quedó cerrado
+- Hay un mensaje de voz sin respuesta
+- El usuario respondió pero no completó la tarea implícita
+- La conversación quedó "en el aire" sin cierre claro
 
-Chats a clasificar:
+Una conversación está RESUELTA si:
+- Hay una confirmación clara de ambas partes
+- El último intercambio es un agradecimiento o confirmación final
+- Claramente no requiere acción
+
+Categorías para los PENDIENTES:
+- URGENTE: citas médicas, seguimiento clínico, salud, emergencias
+- GESTION: coordinación, pagos, agendamiento, tareas de trabajo
+- INFO: requiere una respuesta simple o acuse de recibo
+- SOCIAL: mensajes personales o conversacionales sin urgencia
+
+Para cada chat responde en formato JSON:
+{"id": "CHAT_0", "pendiente": true/false, "categoria": "GESTION", "resumen": "qué falta hacer exactamente", "razon": "por qué está pendiente"}
+
+Si no está pendiente: {"id": "CHAT_0", "pendiente": false}
+
+Chats a analizar:
 
 ${chatSummaries}
 
@@ -37,7 +56,7 @@ Responde ÚNICAMENTE con un array JSON válido, sin texto adicional.`;
 
   const response = await client.messages.create({
     model: 'claude-sonnet-4-20250514',
-    max_tokens: 1024,
+    max_tokens: 2048,
     messages: [{ role: 'user', content: prompt }],
   });
 
@@ -47,18 +66,29 @@ Responde ÚNICAMENTE con un array JSON válido, sin texto adicional.`;
 
   const classifications = JSON.parse(jsonMatch[0]);
 
-  return pendingChats.map((chat, i) => {
+  const now = Math.floor(Date.now() / 1000);
+  const pending = [];
+
+  candidates.forEach((chat, i) => {
     const found = classifications.find(c => c.id === `CHAT_${i}`);
-    const catKey = found?.categoria || 'SOCIAL';
+    if (!found || !found.pendiente) return;
+
+    const catKey = found.categoria || 'SOCIAL';
     const cat = CATEGORIES[catKey] || CATEGORIES.SOCIAL;
-    return {
+    const daysPending = Math.floor((now - chat.lastMessageTime) / 86400);
+
+    pending.push({
       ...chat,
+      lastMessage: found.resumen || chat.recentMessages.slice(-1)[0]?.body || '',
+      daysPending,
       categoria: catKey,
       emoji: cat.emoji,
       prioridad: cat.priority,
-      razon: found?.razon || '',
-    };
-  }).sort((a, b) => a.prioridad - b.prioridad);
+      razon: found.razon || '',
+    });
+  });
+
+  return pending.sort((a, b) => a.prioridad - b.prioridad);
 }
 
 module.exports = { classifyChats, CATEGORIES };
