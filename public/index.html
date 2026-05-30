@@ -17,14 +17,17 @@
     }
 
     header {
-      padding: 20px 32px;
+      padding: 16px 32px;
       border-bottom: 1px solid #222;
       display: flex;
       align-items: center;
       gap: 12px;
+      position: sticky;
+      top: 0;
+      background: #0f0f0f;
+      z-index: 10;
     }
-
-    header h1 { font-size: 1.2rem; font-weight: 600; color: #fff; }
+    header h1 { font-size: 1.1rem; font-weight: 600; color: #fff; }
 
     #status-bar {
       font-size: 0.8rem;
@@ -33,184 +36,154 @@
       background: #222;
       color: #aaa;
     }
-    #status-bar.ready { background: #1a3a1a; color: #4caf50; }
-    #status-bar.qr { background: #1a2a3a; color: #64b5f6; }
+    #status-bar.ready    { background: #1a3a1a; color: #4caf50; }
+    #status-bar.qr       { background: #1a2a3a; color: #64b5f6; }
     #status-bar.scanning { background: #2a2a1a; color: #ffb74d; }
-    #status-bar.error { background: #3a1a1a; color: #ef5350; }
+    #status-bar.error    { background: #3a1a1a; color: #ef5350; }
 
-    main { max-width: 800px; margin: 0 auto; padding: 32px 16px; }
+    main { max-width: 760px; margin: 0 auto; padding: 28px 16px 80px; }
 
+    /* QR */
     #qr-section {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 20px;
-      padding: 48px;
-      background: #1a1a1a;
-      border-radius: 16px;
-      border: 1px solid #2a2a2a;
+      display: flex; flex-direction: column; align-items: center;
+      gap: 20px; padding: 48px;
+      background: #1a1a1a; border-radius: 16px; border: 1px solid #2a2a2a;
     }
-
     #qr-section p { color: #888; font-size: 0.9rem; text-align: center; }
     #qr-container { background: white; padding: 16px; border-radius: 12px; }
 
+    /* Connect */
     #connect-section {
-      text-align: center;
-      padding: 48px;
-      background: #1a1a1a;
-      border-radius: 16px;
-      border: 1px solid #2a2a2a;
+      text-align: center; padding: 48px;
+      background: #1a1a1a; border-radius: 16px; border: 1px solid #2a2a2a;
     }
-
     #connect-section p { color: #888; margin-bottom: 24px; font-size: 0.95rem; }
 
     button#btn-triage {
-      background: #25d366;
-      color: #000;
-      border: none;
-      padding: 14px 32px;
-      border-radius: 10px;
-      font-size: 1rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: opacity 0.2s;
+      background: #25d366; color: #000; border: none;
+      padding: 14px 32px; border-radius: 10px;
+      font-size: 1rem; font-weight: 600; cursor: pointer; transition: opacity 0.2s;
     }
     button#btn-triage:hover { opacity: 0.85; }
     button#btn-triage:disabled { opacity: 0.4; cursor: not-allowed; }
 
-    #loading {
-      text-align: center;
-      padding: 48px;
-      color: #888;
-    }
-
+    /* Loading */
+    #loading { text-align: center; padding: 48px; color: #888; }
     .spinner {
       width: 36px; height: 36px;
-      border: 3px solid #333;
-      border-top-color: #25d366;
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
+      border: 3px solid #333; border-top-color: #25d366;
+      border-radius: 50%; animation: spin 0.8s linear infinite;
       margin: 0 auto 16px;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    #report-section { display: flex; flex-direction: column; gap: 12px; }
-
-    .summary-bar {
-      display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
-      margin-bottom: 8px;
-    }
-
-    .summary-pill {
-      padding: 6px 14px;
-      border-radius: 20px;
-      font-size: 0.85rem;
-      font-weight: 600;
-      background: #1e1e1e;
-      border: 1px solid #2a2a2a;
-    }
+    /* Report */
+    #report-section { display: flex; flex-direction: column; gap: 10px; }
 
     .report-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 16px;
+      display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;
     }
-
-    .report-header h2 { font-size: 1rem; color: #aaa; font-weight: 400; }
-
+    .report-header h2 { font-size: 0.95rem; color: #aaa; font-weight: 400; }
     button#btn-refresh {
-      background: transparent;
-      color: #25d366;
-      border: 1px solid #25d366;
-      padding: 7px 16px;
-      border-radius: 8px;
-      font-size: 0.85rem;
-      cursor: pointer;
+      background: transparent; color: #25d366; border: 1px solid #25d366;
+      padding: 6px 14px; border-radius: 8px; font-size: 0.82rem; cursor: pointer;
     }
     button#btn-refresh:hover { background: #1a3a1a; }
 
-    .group-label {
-      font-size: 0.75rem;
-      font-weight: 700;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: #555;
-      margin-top: 16px;
-      margin-bottom: 6px;
-      padding-left: 4px;
+    .summary-bar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
+    .summary-pill {
+      padding: 5px 12px; border-radius: 20px; font-size: 0.82rem; font-weight: 600;
+      background: #1e1e1e; border: 1px solid #2a2a2a;
     }
 
-    .chat-card {
-      background: #1a1a1a;
-      border: 1px solid #2a2a2a;
-      border-radius: 12px;
-      padding: 16px 18px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      transition: border-color 0.2s;
+    .group-label {
+      font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em;
+      text-transform: uppercase; color: #555;
+      margin-top: 14px; margin-bottom: 4px; padding-left: 2px;
     }
-    .chat-card:hover { border-color: #3a3a3a; }
+
+    /* Card */
+    .chat-card {
+      background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 12px;
+      padding: 14px 16px; display: flex; flex-direction: column; gap: 7px;
+      transition: border-color 0.15s, opacity 0.3s;
+      cursor: pointer;
+    }
+    .chat-card:hover { border-color: #444; }
     .chat-card.urgente { border-left: 3px solid #ef5350; }
     .chat-card.gestion { border-left: 3px solid #ffb74d; }
     .chat-card.info    { border-left: 3px solid #4caf50; }
     .chat-card.social  { border-left: 3px solid #555; }
+    .chat-card.resolved { opacity: 0.35; }
 
-    .card-top {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      gap: 8px;
-    }
+    .card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+    .card-top-left { display: flex; align-items: center; gap: 10px; }
 
-    .card-name { font-weight: 600; font-size: 0.95rem; color: #fff; }
+    .card-name { font-weight: 600; font-size: 0.93rem; color: #fff; }
 
-    .card-meta {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-      flex-shrink: 0;
-    }
+    .card-meta { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
+    .days-label { font-size: 0.73rem; color: #666; }
 
-    .badge {
-      font-size: 0.7rem;
-      padding: 2px 8px;
-      border-radius: 10px;
-      font-weight: 600;
-    }
+    .badge { font-size: 0.68rem; padding: 2px 7px; border-radius: 10px; font-weight: 600; }
     .badge.urgente { background: #3a1a1a; color: #ef5350; }
     .badge.gestion { background: #2a2010; color: #ffb74d; }
     .badge.info    { background: #1a2a1a; color: #4caf50; }
     .badge.social  { background: #1e1e1e; color: #777; }
 
-    .days-label { font-size: 0.75rem; color: #666; }
-
-    .card-summary { font-size: 0.88rem; color: #ccc; line-height: 1.4; }
-    .card-reason  { font-size: 0.78rem; color: #666; font-style: italic; }
+    .card-summary { font-size: 0.86rem; color: #ccc; line-height: 1.4; }
+    .card-reason  { font-size: 0.76rem; color: #666; font-style: italic; }
 
     .card-context {
-      margin-top: 4px;
-      border-top: 1px solid #222;
-      padding-top: 10px;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
+      margin-top: 2px; border-top: 1px solid #222; padding-top: 8px;
+      display: flex; flex-direction: column; gap: 3px;
     }
-
-    .msg-line {
-      font-size: 0.78rem;
-      line-height: 1.4;
-      display: flex;
-      gap: 6px;
-    }
+    .msg-line { font-size: 0.76rem; line-height: 1.4; display: flex; gap: 6px; }
     .msg-who { font-weight: 600; flex-shrink: 0; }
-    .msg-who.me    { color: #64b5f6; }
-    .msg-who.them  { color: #81c784; }
+    .msg-who.me   { color: #64b5f6; }
+    .msg-who.them { color: #81c784; }
     .msg-body { color: #999; }
     .msg-body.media { color: #666; font-style: italic; }
+
+    /* Card actions */
+    .card-actions {
+      display: flex; gap: 8px; align-items: center;
+      border-top: 1px solid #222; padding-top: 8px; margin-top: 2px;
+    }
+    .btn-suggest {
+      background: #1e2a1e; color: #4caf50; border: 1px solid #2a3a2a;
+      padding: 5px 12px; border-radius: 7px; font-size: 0.78rem;
+      cursor: pointer; transition: background 0.15s;
+    }
+    .btn-suggest:hover { background: #243024; }
+    .btn-suggest:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .resolve-label {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 0.78rem; color: #666; cursor: pointer;
+      margin-left: auto;
+    }
+    .resolve-label input { cursor: pointer; accent-color: #25d366; width: 14px; height: 14px; }
+
+    /* Suggestion panel */
+    .suggestion-panel {
+      background: #111; border: 1px solid #2a3a2a; border-radius: 10px;
+      padding: 14px; margin-top: 2px;
+    }
+    .suggestion-panel .s-label {
+      font-size: 0.72rem; color: #4caf50; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px;
+    }
+    .suggestion-text {
+      font-size: 0.86rem; color: #ddd; line-height: 1.6;
+      white-space: pre-wrap; word-break: break-word;
+    }
+    .suggestion-loading { font-size: 0.82rem; color: #666; font-style: italic; }
+    .btn-copy {
+      margin-top: 10px; background: #1a2a1a; color: #4caf50;
+      border: 1px solid #2a3a2a; padding: 5px 14px; border-radius: 7px;
+      font-size: 0.78rem; cursor: pointer;
+    }
+    .btn-copy:hover { background: #223022; }
 
     .hidden { display: none !important; }
   </style>
@@ -244,13 +217,13 @@
 <script>
 const socket = io();
 
-const qrSection     = document.getElementById('qr-section');
+const qrSection      = document.getElementById('qr-section');
 const connectSection = document.getElementById('connect-section');
-const loading       = document.getElementById('loading');
-const loadingMsg    = document.getElementById('loading-msg');
-const reportSection = document.getElementById('report-section');
-const statusBar     = document.getElementById('status-bar');
-const btnTriage     = document.getElementById('btn-triage');
+const loading        = document.getElementById('loading');
+const loadingMsg     = document.getElementById('loading-msg');
+const reportSection  = document.getElementById('report-section');
+const statusBar      = document.getElementById('status-bar');
+const btnTriage      = document.getElementById('btn-triage');
 
 function showOnly(el) {
   [qrSection, connectSection, loading, reportSection].forEach(e => e.classList.add('hidden'));
@@ -264,7 +237,6 @@ socket.on('status', ({ type, message }) => {
   loadingMsg.textContent = message;
 
   if (type === 'ready') {
-    // only show connect screen if there's no report showing
     if (!reportSection.classList.contains('hidden')) return;
     showOnly(connectSection);
     btnTriage.disabled = false;
@@ -278,11 +250,8 @@ socket.on('status', ({ type, message }) => {
 socket.on('qr', (qrData) => {
   document.getElementById('qr-container').innerHTML = '';
   new QRCode(document.getElementById('qr-container'), {
-    text: qrData,
-    width: 220,
-    height: 220,
-    colorDark: '#000',
-    colorLight: '#fff',
+    text: qrData, width: 220, height: 220,
+    colorDark: '#000', colorLight: '#fff',
   });
   showOnly(qrSection);
 });
@@ -294,90 +263,153 @@ btnTriage.addEventListener('click', () => {
 });
 
 socket.on('report', (chats) => {
-  console.log('Reporte recibido:', chats.length, 'chats', JSON.stringify(chats).slice(0, 300));
   try {
     renderReport(chats);
     showOnly(reportSection);
   } catch(e) {
     console.error('Error en renderReport:', e);
-    reportSection.innerHTML = '<p style="color:red;padding:24px">Error al renderizar: ' + e.message + '</p>';
+    reportSection.innerHTML = '<p style="color:red;padding:24px">Error: ' + e.message + '</p>';
     showOnly(reportSection);
   }
 });
 
+// ask server for suggested reply
+socket.on('suggestion', ({ idx, text }) => {
+  const panel = document.getElementById('suggestion-' + idx);
+  if (!panel) return;
+  panel.innerHTML = `
+    <div class="s-label">💬 Sugerencia de respuesta</div>
+    <div class="suggestion-text">${escHtml(text)}</div>
+    <button class="btn-copy" onclick="copyText(this, '${escAttr(text)}')">Copiar</button>
+  `;
+});
+
+function copyText(btn, text) {
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = '✔ Copiado';
+    setTimeout(() => btn.textContent = 'Copiar', 2000);
+  });
+}
+
+let allChats = [];
+
 function renderReport(chats) {
+  allChats = chats;
+  const resolved = new Set(JSON.parse(localStorage.getItem('resolved') || '[]'));
+
   const urgentes = chats.filter(c => c.categoria === 'URGENTE');
   const gestion  = chats.filter(c => c.categoria === 'GESTION');
   const info     = chats.filter(c => c.categoria === 'INFO');
   const social   = chats.filter(c => c.categoria === 'SOCIAL');
 
+  const pending  = chats.filter(c => !resolved.has(c.name)).length;
+
   let html = `
     <div class="report-header">
-      <h2>Reporte — ${new Date().toLocaleDateString('es-MX', {weekday:'long', day:'numeric', month:'long'})}</h2>
-      <button id="btn-refresh">↺ Actualizar</button>
+      <h2>${new Date().toLocaleDateString('es-MX', {weekday:'long', day:'numeric', month:'long'})}</h2>
+      <button id="btn-refresh">↺ Nuevo reporte</button>
     </div>
     <div class="summary-bar">
-      <span class="summary-pill">Total: ${chats.length}</span>
-      <span class="summary-pill" style="color:#ef5350">🔴 ${urgentes.length} urgentes</span>
-      <span class="summary-pill" style="color:#ffb74d">🟡 ${gestion.length} gestión</span>
-      <span class="summary-pill" style="color:#4caf50">🟢 ${info.length} info</span>
-      <span class="summary-pill" style="color:#777">⚪ ${social.length} social</span>
+      <span class="summary-pill">Pendientes: ${pending}</span>
+      <span class="summary-pill" style="color:#ef5350">🔴 ${urgentes.length}</span>
+      <span class="summary-pill" style="color:#ffb74d">🟡 ${gestion.length}</span>
+      <span class="summary-pill" style="color:#4caf50">🟢 ${info.length}</span>
+      <span class="summary-pill" style="color:#777">⚪ ${social.length}</span>
     </div>
   `;
 
   const groups = [
     { label: '🔴 Urgentes', items: urgentes, cat: 'urgente' },
-    { label: '🟡 Gestión', items: gestion, cat: 'gestion' },
-    { label: '🟢 Info', items: info, cat: 'info' },
-    { label: '⚪ Social', items: social, cat: 'social' },
+    { label: '🟡 Gestión',  items: gestion,  cat: 'gestion' },
+    { label: '🟢 Info',     items: info,      cat: 'info'    },
+    { label: '⚪ Social',   items: social,    cat: 'social'  },
   ];
+
+  chats.forEach((chat, idx) => { chat._idx = idx; });
 
   for (const group of groups) {
     if (group.items.length === 0) continue;
     html += `<div class="group-label">${group.label}</div>`;
+
     for (const chat of group.items) {
+      const idx = chat._idx;
+      const isResolved = resolved.has(chat.name);
       const daysText = chat.daysPending === 0 ? 'hoy'
         : chat.daysPending === 1 ? 'hace 1 día'
         : `hace ${chat.daysPending} días`;
 
-      const contextHtml = chat.recentMessages.map(m => {
-        const isMedia = ['ptt','image','video','document','sticker'].includes(m.type) || m.body.startsWith('[');
+      const contextHtml = (chat.recentMessages || []).map(m => {
+        const isMedia = m.body && m.body.startsWith('[');
         return `<div class="msg-line">
-          <span class="msg-who ${m.fromMe ? 'me' : 'them'}">${m.fromMe ? 'Tú' : chat.name.split(' ')[0]}:</span>
-          <span class="msg-body ${isMedia ? 'media' : ''}">${escHtml(m.body)}</span>
+          <span class="msg-who ${m.fromMe ? 'me' : 'them'}">${m.fromMe ? 'Tú' : escHtml(chat.name.split(' ')[0])}:</span>
+          <span class="msg-body ${isMedia ? 'media' : ''}">${escHtml(m.body || '')}</span>
         </div>`;
       }).join('');
 
       html += `
-        <div class="chat-card ${group.cat}">
+        <div class="chat-card ${group.cat} ${isResolved ? 'resolved' : ''}" id="card-${idx}">
           <div class="card-top">
-            <span class="card-name">${escHtml(chat.name)}</span>
+            <div class="card-top-left">
+              <span class="card-name">${escHtml(chat.name)}</span>
+            </div>
             <div class="card-meta">
               <span class="days-label">${daysText}</span>
               <span class="badge ${group.cat}">${chat.emoji} ${group.cat.toUpperCase()}</span>
             </div>
           </div>
-          <div class="card-summary">${escHtml(chat.lastMessage)}</div>
+          <div class="card-summary">${escHtml(chat.lastMessage || '')}</div>
           ${chat.razon ? `<div class="card-reason">${escHtml(chat.razon)}</div>` : ''}
           <div class="card-context">${contextHtml}</div>
+          <div class="card-actions">
+            <button class="btn-suggest" onclick="getSuggestion(event, ${idx})">✨ Sugerir respuesta</button>
+            <label class="resolve-label">
+              <input type="checkbox" ${isResolved ? 'checked' : ''} onchange="toggleResolved(event, '${escAttr(chat.name)}', ${idx})">
+              Resuelto
+            </label>
+          </div>
+          <div id="suggestion-${idx}" class="suggestion-panel hidden"></div>
         </div>`;
     }
   }
 
   reportSection.innerHTML = html;
-
   document.getElementById('btn-refresh').addEventListener('click', () => {
     showOnly(connectSection);
     btnTriage.disabled = false;
   });
 }
 
+function getSuggestion(e, idx) {
+  e.stopPropagation();
+  const panel = document.getElementById('suggestion-' + idx);
+  panel.classList.remove('hidden');
+  panel.innerHTML = '<div class="suggestion-loading">Generando sugerencia...</div>';
+  socket.emit('get_suggestion', { idx });
+}
+
+function toggleResolved(e, name, idx) {
+  e.stopPropagation();
+  const resolved = new Set(JSON.parse(localStorage.getItem('resolved') || '[]'));
+  if (e.target.checked) resolved.add(name);
+  else resolved.delete(name);
+  localStorage.setItem('resolved', JSON.stringify([...resolved]));
+
+  const card = document.getElementById('card-' + idx);
+  if (card) card.classList.toggle('resolved', e.target.checked);
+
+  // update pending count
+  const pending = allChats.filter(c => !resolved.has(c.name)).length;
+  const pill = document.querySelector('.summary-pill');
+  if (pill) pill.textContent = 'Pendientes: ' + pending;
+}
+
 function escHtml(str) {
-  return String(str)
-    .replace(/&/g,'&amp;')
-    .replace(/</g,'&lt;')
-    .replace(/>/g,'&gt;')
-    .replace(/"/g,'&quot;');
+  return String(str || '')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function escAttr(str) {
+  return String(str || '').replace(/'/g, "\\'").replace(/\n/g, '\\n');
 }
 </script>
 </body>

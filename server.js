@@ -59,7 +59,26 @@ io.on('connection', (socket) => {
   socket.emit('status', { type: status, message: statusMessage(status) });
   if (lastReport) socket.emit('report', lastReport);
 
-  socket.on('start_triage', async () => {
+  socket.on('get_suggestion', async ({ idx }) => {
+    if (!lastReport || !lastReport[idx]) return;
+    const chat = lastReport[idx];
+    try {
+      const Anthropic = require('@anthropic-ai/sdk');
+      const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+      const context = (chat.recentMessages || []).slice(-5)
+        .map(m => `[${m.fromMe ? 'YO' : chat.name}]: ${m.body}`).join('\n');
+      const res = await client.messages.create({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 300,
+        messages: [{ role: 'user', content:
+          `Eres un asistente que ayuda a redactar respuestas de WhatsApp breves y naturales en español.\n\nContexto de la conversación:\n${context}\n\nPendiente: ${chat.lastMessage}\n\nEscribe UNA respuesta corta, cálida y directa como si fuera el usuario. Solo el texto del mensaje, sin explicaciones.`
+        }],
+      });
+      socket.emit('suggestion', { idx, text: res.content[0].text.trim() });
+    } catch(e) {
+      socket.emit('suggestion', { idx, text: 'Error al generar sugerencia: ' + e.message });
+    }
+  });
     if (status !== 'ready') return;
     status = 'scanning';
     io.emit('status', { type: 'scanning', message: 'Cargando chats...' });
