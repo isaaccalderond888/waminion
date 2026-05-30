@@ -71,22 +71,27 @@ io.on('connection', (socket) => {
     io.emit('status', { type: 'scanning', message: 'Cargando chats...' });
 
     try {
-      const chats = await waClient.getChats();
+      const allChats = await waClient.getChats();
       const now = Math.floor(Date.now() / 1000);
       const sieteAias = now - 7 * 24 * 60 * 60;
+
+      // filter first without touching puppeteer
+      const recentChats = allChats.filter(c =>
+        !c.isGroup &&
+        c.lastMessage &&
+        c.lastMessage.timestamp >= sieteAias
+      );
+
+      io.emit('status', { type: 'scanning', message: `Leyendo ${recentChats.length} chats recientes...` });
+
       const candidates = [];
-      let procesados = 0;
-
-      for (const chat of chats) {
-        if (chat.isGroup) continue;
-        if (!chat.lastMessage) continue;
-        if (chat.lastMessage.timestamp < sieteAias) continue;
-
+      for (let i = 0; i < recentChats.length; i++) {
+        const chat = recentChats[i];
         try {
-          const messages = await chat.fetchMessages({ limit: 10 });
+          const messages = await chat.fetchMessages({ limit: 8 });
           const recentMessages = messages
             .filter(m => (m.body && m.body.trim()) || m.type !== 'chat')
-            .slice(-8)
+            .slice(-6)
             .map(m => ({
               fromMe: m.fromMe,
               body: m.body && m.body.trim() ? m.body
@@ -103,11 +108,11 @@ io.on('connection', (socket) => {
           const contact = await chat.getContact();
           const name = contact.pushname || contact.name || chat.name || chat.id.user;
           candidates.push({ name, lastMessageTime: chat.lastMessage.timestamp, recentMessages });
-        } catch (e) { /* skip individual chat errors */ }
+        } catch (e) { /* skip */ }
 
-        procesados++;
-        if (procesados % 10 === 0) {
-          io.emit('status', { type: 'scanning', message: `Revisando chats... ${procesados}/${chats.length}` });
+        if ((i + 1) % 5 === 0) {
+          io.emit('status', { type: 'scanning', message: `Leyendo chats... ${i + 1}/${recentChats.length}` });
+          await new Promise(r => setTimeout(r, 300)); // small pause to avoid overloading puppeteer
         }
       }
 
