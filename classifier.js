@@ -9,112 +9,91 @@ const CATEGORIES = {
   SOCIAL: { emoji: '⚪', label: 'SOCIAL', priority: 4 },
 };
 
-const BATCH_SIZE = 30;
+const BATCH_SIZE = 10;
 
 async function classifyChats(candidates) {
   if (candidates.length === 0) return [];
 
-  // process in batches to avoid token limits
-  if (candidates.length > BATCH_SIZE) {
-    const results = [];
-    for (let i = 0; i < candidates.length; i += BATCH_SIZE) {
-      const batch = candidates.slice(i, i + BATCH_SIZE);
-      const batchResult = await classifyBatch(batch, i);
-      results.push(...batchResult);
-    }
-    return results.sort((a, b) => a.prioridad - b.prioridad);
+  const allPending = [];
+  for (let i = 0; i < candidates.length; i += BATCH_SIZE) {
+    const batch = candidates.slice(i, i + BATCH_SIZE);
+    const batchPending = await classifyBatch(batch);
+    allPending.push(...batchPending);
   }
-
-  return classifyBatch(candidates, 0);
+  return allPending.sort((a, b) => a.prioridad - b.prioridad);
 }
 
-async function classifyBatch(candidates, offset) {
+async function classifyBatch(candidates) {
   const chatSummaries = candidates.map((chat, i) => {
-    const context = chat.recentMessages
-      .map(m => `    [${m.fromMe ? 'YO' : chat.name}]: ${m.body}`)
+    // limit to last 3 messages and truncate each to 120 chars to keep prompt small
+    const context = chat.recentMessages.slice(-3)
+      .map(m => `  [${m.fromMe ? 'YO' : chat.name.split(' ')[0]}]: ${m.body.slice(0, 120)}`)
       .join('\n');
-    return `CHAT_${offset + i} | Contacto: ${chat.name}\nMensajes recientes (del más antiguo al más nuevo):\n${context}`;
-  }).join('\n\n---\n\n');
+    return `C${i} | ${chat.name}\n${context}`;
+  }).join('\n\n');
 
-  const prompt = `Eres un asistente personal analizando conversaciones de WhatsApp de los últimos 7 días. El usuario tiene TDAH y a veces inicia tareas pero no las completa, o responde pero olvida hacer el seguimiento real.
+  const prompt = `Analiza estas conversaciones de WhatsApp. El usuario tiene TDAH y olvida hacer seguimiento.
 
-Tu trabajo es:
-1. Determinar si cada conversación tiene algo PENDIENTE de acción por parte del usuario ("YO")
-2. Si está pendiente, clasificarlo y describir exactamente qué falta hacer
+Determina si cada conversación tiene algo PENDIENTE de acción del usuario (YO).
 
-Una conversación está PENDIENTE si:
-- Alguien le pidió algo al usuario y no hay confirmación de que se hizo
-- Quedaron de coordinar algo y no quedó cerrado
-- Hay un mensaje de voz sin respuesta
-- El usuario respondió pero no completó la tarea implícita
-- La conversación quedó "en el aire" sin cierre claro
+PENDIENTE: alguien pidió algo sin confirmación, tarea prometida sin completar, mensaje de voz sin respuesta, conversación sin cierre.
+RESUELTO: confirmación clara, agradecimiento final, no requiere acción.
 
-Una conversación está RESUELTA si:
-- Hay una confirmación clara de ambas partes
-- El último intercambio es un agradecimiento o confirmación final
-- Claramente no requiere acción
+Categorías: URGENTE (salud/citas médicas), GESTION (trabajo/pagos/agenda), INFO (respuesta simple), SOCIAL (personal)
 
-Categorías para los PENDIENTES:
-- URGENTE: citas médicas, seguimiento clínico, salud, emergencias
-- GESTION: coordinación, pagos, agendamiento, tareas de trabajo
-- INFO: requiere una respuesta simple o acuse de recibo
-- SOCIAL: mensajes personales o conversacionales sin urgencia
+Responde SOLO con JSON array, sin markdown, sin explicación:
+[{"i":0,"p":true,"cat":"GESTION","q":"qué falta hacer"},{"i":1,"p":false}]
 
-Para cada chat responde en formato JSON:
-{"id": "CHAT_0", "pendiente": true/false, "categoria": "GESTION", "resumen": "qué falta hacer exactamente", "razon": "por qué está pendiente"}
-
-Si no está pendiente: {"id": "CHAT_0", "pendiente": false}
-
-Chats a analizar:
-
-${chatSummaries}
-
-Responde ÚNICAMENTE con un array JSON válido, sin texto adicional.`;
+Conversaciones:
+${chatSummaries}`;
 
   const response = await client.messages.create({
     model: 'claude-sonnet-4-20250514',
-    max_tokens: 4096,
+    max_tokens: 1024,
     messages: [{ role: 'user', content: prompt }],
   });
 
-  const raw = response.content[0].text.trim();
-  // strip markdown code fences if present
-  const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
-  const jsonMatch = cleaned.match(/\[[\s\S]*\]/);
-  if (!jsonMatch) throw new Error('Claude no devolvió JSON válido: ' + raw);
+  const raw = response.content[0].text.trim()
+    .replace(/^```(?:json)?\s*/i, '')
+    .replace(/\s*```$/i, '');
 
   let classifications;
   try {
-    classifications = JSON.parse(jsonMatch[0]);
+    classifications = JSON.parse(raw);
   } catch (e) {
-    // try to recover truncated JSON by closing open structures
-    const partial = jsonMatch[0].replace(/,\s*\{[^}]*$/, '') + ']';
-    classifications = JSON.parse(partial);
+    // attempt recovery from truncated JSON
+    try {
+      const fixed = raw.replace(/,\s*\{[^}]*$/, '') + ']';
+      classifications = JSON.parse(fixed);
+    } catch (e2) {
+      console.error('No se pudo parsear respuesta de Claude:', raw.slice(0, 200));
+      return [];
+    }
   }
 
   const now = Math.floor(Date.now() / 1000);
   const pending = [];
 
   candidates.forEach((chat, i) => {
-    const found = classifications.find(c => c.id === `CHAT_${offset + i}`);
-    if (!found || !found.pendiente) return;
+    const found = classifications.find(c => c.i === i);
+    if (!found || !found.p) return;
 
-    const catKey = found.categoria || 'SOCIAL';
+    const catKey = (found.cat || 'SOCIAL').toUpperCase();
     const cat = CATEGORIES[catKey] || CATEGORIES.SOCIAL;
     const daysPending = Math.floor((now - chat.lastMessageTime) / 86400);
 
     pending.push({
       ...chat,
-      lastMessage: found.resumen || chat.recentMessages.slice(-1)[0]?.body || '',
+      lastMessage: found.q || chat.recentMessages.slice(-1)[0]?.body || '',
       daysPending,
       categoria: catKey,
       emoji: cat.emoji,
       prioridad: cat.priority,
-      razon: found.razon || '',
+      razon: found.q || '',
     });
   });
 
-  return pending.sort((a, b) => a.prioridad - b.prioridad);
+  return pending;
 }
 
 module.exports = { classifyChats, CATEGORIES };
