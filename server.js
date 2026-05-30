@@ -3,6 +3,7 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const { Client, LocalAuth } = require('whatsapp-web.js');
+const Anthropic = require('@anthropic-ai/sdk');
 const chalk = require('chalk');
 const { classifyChats } = require('./classifier');
 const { saveReport } = require('./reporter');
@@ -12,6 +13,7 @@ if (!process.env.ANTHROPIC_API_KEY) {
   process.exit(1);
 }
 
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const app = express();
 const httpServer = http.createServer(app);
 const io = new Server(httpServer);
@@ -49,7 +51,11 @@ function createClient() {
 
   waClient.on('disconnected', () => {
     status = 'disconnected';
-    io.emit('status', { type: 'error', message: 'WhatsApp desconectado' });
+    io.emit('status', { type: 'error', message: 'WhatsApp desconectado — reiniciando...' });
+    setTimeout(() => {
+      console.log(chalk.yellow('Reconectando WhatsApp...'));
+      createClient();
+    }, 5000);
   });
 
   waClient.initialize();
@@ -59,26 +65,7 @@ io.on('connection', (socket) => {
   socket.emit('status', { type: status, message: statusMessage(status) });
   if (lastReport) socket.emit('report', lastReport);
 
-  socket.on('get_suggestion', async ({ idx }) => {
-    if (!lastReport || !lastReport[idx]) return;
-    const chat = lastReport[idx];
-    try {
-      const Anthropic = require('@anthropic-ai/sdk');
-      const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-      const context = (chat.recentMessages || []).slice(-5)
-        .map(m => `[${m.fromMe ? 'YO' : chat.name}]: ${m.body}`).join('\n');
-      const res = await client.messages.create({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 300,
-        messages: [{ role: 'user', content:
-          `Eres un asistente que ayuda a redactar respuestas de WhatsApp breves y naturales en español.\n\nContexto de la conversación:\n${context}\n\nPendiente: ${chat.lastMessage}\n\nEscribe UNA respuesta corta, cálida y directa como si fuera el usuario. Solo el texto del mensaje, sin explicaciones.`
-        }],
-      });
-      socket.emit('suggestion', { idx, text: res.content[0].text.trim() });
-    } catch(e) {
-      socket.emit('suggestion', { idx, text: 'Error al generar sugerencia: ' + e.message });
-    }
-  });
+  socket.on('start_triage', async () => {
     if (status !== 'ready') return;
     status = 'scanning';
     io.emit('status', { type: 'scanning', message: 'Cargando chats...' });
@@ -115,9 +102,8 @@ io.on('connection', (socket) => {
 
           const contact = await chat.getContact();
           const name = contact.pushname || contact.name || chat.name || chat.id.user;
-
           candidates.push({ name, lastMessageTime: chat.lastMessage.timestamp, recentMessages });
-        } catch (e) { /* skip */ }
+        } catch (e) { /* skip individual chat errors */ }
 
         procesados++;
         if (procesados % 10 === 0) {
@@ -136,6 +122,25 @@ io.on('connection', (socket) => {
     } catch (err) {
       status = 'ready';
       io.emit('status', { type: 'error', message: 'Error: ' + err.message });
+    }
+  });
+
+  socket.on('get_suggestion', async ({ idx }) => {
+    if (!lastReport || !lastReport[idx]) return;
+    const chat = lastReport[idx];
+    try {
+      const context = (chat.recentMessages || []).slice(-5)
+        .map(m => `[${m.fromMe ? 'YO' : chat.name}]: ${m.body}`).join('\n');
+      const res = await anthropic.messages.create({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 300,
+        messages: [{ role: 'user', content:
+          `Eres un asistente que ayuda a redactar respuestas de WhatsApp breves y naturales en español.\n\nContexto:\n${context}\n\nPendiente: ${chat.lastMessage}\n\nEscribe UNA respuesta corta, cálida y directa. Solo el texto del mensaje, sin explicaciones.`
+        }],
+      });
+      socket.emit('suggestion', { idx, text: res.content[0].text.trim() });
+    } catch (e) {
+      socket.emit('suggestion', { idx, text: 'Error: ' + e.message });
     }
   });
 });
