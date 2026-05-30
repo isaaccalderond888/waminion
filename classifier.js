@@ -9,14 +9,31 @@ const CATEGORIES = {
   SOCIAL: { emoji: '⚪', label: 'SOCIAL', priority: 4 },
 };
 
+const BATCH_SIZE = 30;
+
 async function classifyChats(candidates) {
   if (candidates.length === 0) return [];
 
+  // process in batches to avoid token limits
+  if (candidates.length > BATCH_SIZE) {
+    const results = [];
+    for (let i = 0; i < candidates.length; i += BATCH_SIZE) {
+      const batch = candidates.slice(i, i + BATCH_SIZE);
+      const batchResult = await classifyBatch(batch, i);
+      results.push(...batchResult);
+    }
+    return results.sort((a, b) => a.prioridad - b.prioridad);
+  }
+
+  return classifyBatch(candidates, 0);
+}
+
+async function classifyBatch(candidates, offset) {
   const chatSummaries = candidates.map((chat, i) => {
     const context = chat.recentMessages
       .map(m => `    [${m.fromMe ? 'YO' : chat.name}]: ${m.body}`)
       .join('\n');
-    return `CHAT_${i} | Contacto: ${chat.name}\nMensajes recientes (del más antiguo al más nuevo):\n${context}`;
+    return `CHAT_${offset + i} | Contacto: ${chat.name}\nMensajes recientes (del más antiguo al más nuevo):\n${context}`;
   }).join('\n\n---\n\n');
 
   const prompt = `Eres un asistente personal analizando conversaciones de WhatsApp de los últimos 7 días. El usuario tiene TDAH y a veces inicia tareas pero no las completa, o responde pero olvida hacer el seguimiento real.
@@ -56,21 +73,30 @@ Responde ÚNICAMENTE con un array JSON válido, sin texto adicional.`;
 
   const response = await client.messages.create({
     model: 'claude-sonnet-4-20250514',
-    max_tokens: 2048,
+    max_tokens: 4096,
     messages: [{ role: 'user', content: prompt }],
   });
 
   const raw = response.content[0].text.trim();
-  const jsonMatch = raw.match(/\[[\s\S]*\]/);
+  // strip markdown code fences if present
+  const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
+  const jsonMatch = cleaned.match(/\[[\s\S]*\]/);
   if (!jsonMatch) throw new Error('Claude no devolvió JSON válido: ' + raw);
 
-  const classifications = JSON.parse(jsonMatch[0]);
+  let classifications;
+  try {
+    classifications = JSON.parse(jsonMatch[0]);
+  } catch (e) {
+    // try to recover truncated JSON by closing open structures
+    const partial = jsonMatch[0].replace(/,\s*\{[^}]*$/, '') + ']';
+    classifications = JSON.parse(partial);
+  }
 
   const now = Math.floor(Date.now() / 1000);
   const pending = [];
 
   candidates.forEach((chat, i) => {
-    const found = classifications.find(c => c.id === `CHAT_${i}`);
+    const found = classifications.find(c => c.id === `CHAT_${offset + i}`);
     if (!found || !found.pendiente) return;
 
     const catKey = found.categoria || 'SOCIAL';
