@@ -292,8 +292,15 @@ btnTriage.addEventListener('click', () => {
 });
 
 socket.on('report', (chats) => {
-  renderReport(chats);
-  showOnly(reportSection);
+  console.log('Reporte recibido:', chats.length, 'chats', JSON.stringify(chats).slice(0, 300));
+  try {
+    renderReport(chats);
+    showOnly(reportSection);
+  } catch(e) {
+    console.error('Error en renderReport:', e);
+    reportSection.innerHTML = '<p style="color:red;padding:24px">Error al renderizar: ' + e.message + '</p>';
+    showOnly(reportSection);
+  }
 });
 
 function renderReport(chats) {
