@@ -23,7 +23,18 @@ app.use(express.static(__dirname + '/public'));
 let waClient = null;
 let status = 'disconnected';
 let lastReport = null;
-let voiceProfile = null;
+
+const voiceProfile = `Estilo de escritura de Isaac:
+1. Muy directo y corto — mensajes de 1-2 líneas, va al punto sin rodeos
+2. Tono cálido pero informal — usa "hola", "lindo día 🙂", "qué gusto", nunca suena corporativo
+3. Emojis escasos y específicos — 🙂 😊 😬, nunca más de uno por mensaje
+4. "jeje" como muletilla para suavizar situaciones incómodas o cuando algo le da gracia
+5. Minúsculas frecuentes — "perfecto", "vale", "gracias" sin mayúscula, es intencional
+6. Frases puente características: "al ratito", "ahorita", "por ahí", "en cuanto", "sale vale", "va perfecto"
+7. Cuando coordina horarios: da opciones concretas en lista. Ej: "martes 3pm / miércoles 3pm / jueves 11am"
+8. Cuando algo es delicado escribe más largo pero siempre cierra con algo cálido
+9. Nunca signos de exclamación solos — si usa "!" es con palabra: "Hola Mili!!", "Claro que sí!"
+10. "Claro que sí" es su forma cálida de decir que sí, no solo "ok" o "sí"`;
 
 function createClient() {
   waClient = new Client({
@@ -117,11 +128,6 @@ io.on('connection', (socket) => {
         }
       }
 
-      io.emit('status', { type: 'scanning', message: 'Analizando tu estilo de escritura...' });
-      if (!voiceProfile) {
-        voiceProfile = await buildVoiceProfile(candidates);
-      }
-
       io.emit('status', { type: 'scanning', message: `Clasificando ${candidates.length} chats con IA...` });
       const classified = await classifyChats(candidates);
 
@@ -171,37 +177,6 @@ Escribe SOLO el mensaje de WhatsApp, nada más.`
   });
 });
 
-async function buildVoiceProfile(candidates) {
-  // collect messages written by the user (fromMe) across all chats
-  const myMessages = [];
-  for (const chat of candidates) {
-    for (const m of (chat.recentMessages || [])) {
-      if (m.fromMe && m.body && !m.body.startsWith('[') && m.body.length > 8) {
-        myMessages.push(m.body);
-      }
-    }
-  }
-
-  if (myMessages.length < 5) return null;
-
-  // pick up to 60 messages spread across chats for variety
-  const sample = myMessages.slice(0, 60).join('\n---\n');
-
-  const res = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
-    max_tokens: 400,
-    messages: [{ role: 'user', content:
-      `Analiza estos mensajes de WhatsApp escritos por la misma persona y describe su estilo de escritura en 8-10 puntos concretos y cortos. Enfócate en: tono, formalidad, uso de emojis, puntuación, muletillas, longitud de mensajes, cómo saluda/despide, expresiones frecuentes.
-
-Mensajes:
-${sample}
-
-Responde SOLO con una lista numerada, sin introducción ni conclusión.`
-    }],
-  });
-
-  return res.content[0].text.trim();
-}
 
 function statusMessage(s) {
   if (s === 'disconnected') return 'Iniciando...';
