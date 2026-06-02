@@ -23,6 +23,7 @@ app.use(express.static(__dirname + '/public'));
 let waClient = null;
 let status = 'disconnected';
 let lastReport = null;
+let voiceProfile = null;
 
 function createClient() {
   waClient = new Client({
@@ -116,13 +117,19 @@ io.on('connection', (socket) => {
         }
       }
 
-      io.emit('status', { type: 'scanning', message: `Analizando ${candidates.length} chats con IA...` });
+      io.emit('status', { type: 'scanning', message: 'Analizando tu estilo de escritura...' });
+      if (!voiceProfile) {
+        voiceProfile = await buildVoiceProfile(candidates);
+      }
+
+      io.emit('status', { type: 'scanning', message: `Clasificando ${candidates.length} chats con IA...` });
       const classified = await classifyChats(candidates);
 
       saveReport(classified);
       lastReport = classified;
       status = 'ready';
       io.emit('report', classified);
+      if (voiceProfile) io.emit('voice_profile', voiceProfile);
       io.emit('status', { type: 'ready', message: `Listo — ${classified.length} pendientes encontrados` });
     } catch (err) {
       status = 'ready';
@@ -140,20 +147,21 @@ io.on('connection', (socket) => {
         model: 'claude-sonnet-4-20250514',
         max_tokens: 300,
         messages: [{ role: 'user', content:
-          `Eres un asistente que ayuda a Isaac (psicólogo) a redactar respuestas de WhatsApp breves y naturales en español.
+          `Eres Isaac (psicólogo) respondiendo un WhatsApp. Debes sonar exactamente como él, no como un asistente.
 
-Links de Isaac para agendar:
+${voiceProfile ? `ESTILO DE ESCRITURA DE ISAAC (síguelo al pie de la letra):\n${voiceProfile}\n` : ''}
+Links para agendar (úsalos solo si el tema es terapia o disponibilidad):
 - Sesiones online/Zoom: https://calendly.com/isaac-calderon-d
 - Sesiones presenciales (Clínica Newman): https://clinicanewman.site.agendapro.com/mx/sucursal/425003/profesional/692142
 
-Si el mensaje es sobre agendar, disponibilidad o terapia, incluye el link de Calendly de forma natural y amable. Menciona que si no encuentra un espacio disponible que te avise y buscan entre las consultas presenciales.
+Si es sobre agendar, sugiere primero Calendly y menciona que si no encuentra espacio que te avise para ver entre las presenciales.
 
-Contexto de la conversación:
+Conversación:
 ${context}
 
-Pendiente: ${chat.lastMessage}
+Qué falta resolver: ${chat.lastMessage}
 
-Escribe UNA respuesta corta, cálida y directa como si fuera Isaac. Solo el texto del mensaje, sin explicaciones.`
+Escribe SOLO el mensaje de WhatsApp, nada más.`
         }],
       });
       socket.emit('suggestion', { idx, text: res.content[0].text.trim() });
@@ -162,6 +170,38 @@ Escribe UNA respuesta corta, cálida y directa como si fuera Isaac. Solo el text
     }
   });
 });
+
+async function buildVoiceProfile(candidates) {
+  // collect messages written by the user (fromMe) across all chats
+  const myMessages = [];
+  for (const chat of candidates) {
+    for (const m of (chat.recentMessages || [])) {
+      if (m.fromMe && m.body && !m.body.startsWith('[') && m.body.length > 8) {
+        myMessages.push(m.body);
+      }
+    }
+  }
+
+  if (myMessages.length < 5) return null;
+
+  // pick up to 60 messages spread across chats for variety
+  const sample = myMessages.slice(0, 60).join('\n---\n');
+
+  const res = await anthropic.messages.create({
+    model: 'claude-sonnet-4-20250514',
+    max_tokens: 400,
+    messages: [{ role: 'user', content:
+      `Analiza estos mensajes de WhatsApp escritos por la misma persona y describe su estilo de escritura en 8-10 puntos concretos y cortos. Enfócate en: tono, formalidad, uso de emojis, puntuación, muletillas, longitud de mensajes, cómo saluda/despide, expresiones frecuentes.
+
+Mensajes:
+${sample}
+
+Responde SOLO con una lista numerada, sin introducción ni conclusión.`
+    }],
+  });
+
+  return res.content[0].text.trim();
+}
 
 function statusMessage(s) {
   if (s === 'disconnected') return 'Iniciando...';

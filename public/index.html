@@ -185,6 +185,19 @@
     }
     .btn-copy:hover { background: #223022; }
 
+    #voice-profile-bar {
+      background: #111; border: 1px solid #1a3a1a; border-radius: 10px;
+      padding: 12px 16px; margin-bottom: 16px; font-size: 0.8rem; color: #666;
+    }
+    #voice-profile-bar summary {
+      cursor: pointer; color: #4caf50; font-weight: 600; font-size: 0.82rem;
+      list-style: none; display: flex; align-items: center; gap: 6px;
+    }
+    #voice-profile-bar summary::-webkit-details-marker { display: none; }
+    #voice-profile-bar .profile-content {
+      margin-top: 10px; color: #888; line-height: 1.7; white-space: pre-wrap;
+    }
+
     .hidden { display: none !important; }
   </style>
 </head>
@@ -211,6 +224,7 @@
     <p id="loading-msg">Cargando chats...</p>
   </div>
 
+  <div id="voice-profile-bar" class="hidden"></div>
   <div id="report-section" class="hidden"></div>
 </main>
 
@@ -229,6 +243,7 @@ function showOnly(el) {
   [qrSection, connectSection, loading, reportSection].forEach(e => e.classList.add('hidden'));
   if (el) el.classList.remove('hidden');
 }
+
 
 socket.on('status', ({ type, message }) => {
   statusBar.textContent = message;
@@ -260,6 +275,15 @@ btnTriage.addEventListener('click', () => {
   btnTriage.disabled = true;
   showOnly(loading);
   socket.emit('start_triage');
+});
+
+socket.on('voice_profile', (profile) => {
+  const bar = document.getElementById('voice-profile-bar');
+  bar.classList.remove('hidden');
+  bar.innerHTML = `<details>
+    <summary>🎙️ Tu estilo detectado (click para ver)</summary>
+    <div class="profile-content">${escHtml(profile)}</div>
+  </details>`;
 });
 
 socket.on('report', (chats) => {
