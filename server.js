@@ -150,7 +150,7 @@ io.on('connection', (socket) => {
       const context = (chat.recentMessages || []).slice(-5)
         .map(m => `[${m.fromMe ? 'YO' : chat.name}]: ${m.body}`).join('\n');
       const res = await anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-6',
         max_tokens: 300,
         messages: [{ role: 'user', content:
           `Eres Isaac (psicólogo) respondiendo un WhatsApp. Debes sonar exactamente como él, no como un asistente.
