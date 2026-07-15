@@ -21,11 +21,6 @@ const client = new Client({
     args: ['--no-sandbox', '--disable-setuid-sandbox'],
     protocolTimeout: 180000,
   },
-  // ancla una versión estable de WhatsApp Web para evitar el error "r"
-  webVersionCache: {
-    type: 'remote',
-    remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.3000.1024770558-alpha.html',
-  },
 });
 
 client.on('qr', (qr) => {
