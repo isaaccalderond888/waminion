@@ -83,7 +83,15 @@ io.on('connection', (socket) => {
     io.emit('status', { type: 'scanning', message: 'Cargando chats...' });
 
     try {
-      const allChats = await waClient.getChats();
+      let allChats;
+      try {
+        allChats = await waClient.getChats();
+      } catch (e) {
+        // puppeteer glitch — wait and retry once
+        io.emit('status', { type: 'scanning', message: 'Reintentando conexión...' });
+        await new Promise(r => setTimeout(r, 3000));
+        allChats = await waClient.getChats();
+      }
       const now = Math.floor(Date.now() / 1000);
       const sieteAias = now - 7 * 24 * 60 * 60;
 
@@ -139,7 +147,9 @@ io.on('connection', (socket) => {
       io.emit('status', { type: 'ready', message: `Listo — ${classified.length} pendientes encontrados` });
     } catch (err) {
       status = 'ready';
-      io.emit('status', { type: 'error', message: 'Error: ' + err.message });
+      const msg = err && err.message ? err.message : String(err);
+      console.error('Error en triaje:', err);
+      io.emit('status', { type: 'error', message: 'Error al escanear (intenta de nuevo): ' + msg });
     }
   });
 
