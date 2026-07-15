@@ -21,6 +21,11 @@ const client = new Client({
     args: ['--no-sandbox', '--disable-setuid-sandbox'],
     protocolTimeout: 180000,
   },
+  // ancla una versión estable de WhatsApp Web para evitar el error "r"
+  webVersionCache: {
+    type: 'remote',
+    remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.3000.1024770558-alpha.html',
+  },
 });
 
 client.on('qr', (qr) => {
@@ -34,15 +39,21 @@ client.on('auth_failure', (m) => { console.error(chalk.red('Fallo de auth:'), m)
 client.on('ready', async () => {
   console.log(chalk.green('\n✔ WhatsApp conectado\n'));
   try {
-    console.log(chalk.gray('Leyendo lista de chats...'));
+    console.log(chalk.gray('Esperando a que WhatsApp cargue del todo...'));
+    await wait(6000);
 
+    console.log(chalk.gray('Leyendo lista de chats...'));
     let allChats;
-    try {
-      allChats = await client.getChats();
-    } catch (e) {
-      console.log(chalk.yellow('Reintentando...'));
-      await wait(3000);
-      allChats = await client.getChats();
+    const esperas = [0, 5000, 10000, 15000];
+    for (let intento = 0; intento < esperas.length; intento++) {
+      try {
+        if (esperas[intento]) await wait(esperas[intento]);
+        allChats = await client.getChats();
+        break;
+      } catch (e) {
+        console.log(chalk.yellow(`  Intento ${intento + 1} falló, reintentando...`));
+        if (intento === esperas.length - 1) throw e;
+      }
     }
 
     const now = Math.floor(Date.now() / 1000);
